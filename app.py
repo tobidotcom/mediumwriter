@@ -1,10 +1,10 @@
 import streamlit as st
 import asyncio
 import time
-import requests
 import json
 import os
 from dotenv import load_dotenv
+import aiohttp
 
 load_dotenv()
 
@@ -48,18 +48,19 @@ async def run_function_agent(agent_id, prompt):
     if st.session_state.load_spinner is None:
         st.session_state.load_spinner = st.spinner(text="Processing...")
     with st.session_state.load_spinner:
-        async with requests.post(url, headers=headers, json=data, stream=True) as response:
-            for chunk in response.iter_content(chunk_size=1024):
-                if chunk:
-                    raw_data = chunk.decode('utf-8').replace("data: ", '')
-                    for line in raw_data.strip().splitlines():
-                        if line and line != "[DONE]":
-                            try:
-                                json_object = json.loads(line)
-                                result = json_object['data']
-                                full_response += result
-                            except json.JSONDecodeError:
-                                print(f'Error : {line}')
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, headers=headers, json=data) as response:
+                async for chunk in response.content.iter_chunked(1024):
+                    if chunk:
+                        raw_data = chunk.decode('utf-8').replace("data: ", '')
+                        for line in raw_data.strip().splitlines():
+                            if line and line != "[DONE]":
+                                try:
+                                    json_object = json.loads(line)
+                                    result = json_object['data']
+                                    full_response += result
+                                except json.JSONDecodeError:
+                                    print(f'Error : {line}')
     try:
         json_response = json.loads(full_response)
         return json_response
@@ -89,16 +90,17 @@ def medium_publish():
     if st.session_state.load_spinner is None:
         st.session_state.load_spinner = st.spinner(text="Processing...")
     with st.session_state.load_spinner:
-        response = requests.post(url, headers=headers, json={"agentId": codegpt_agent_id, "stream": True, "format": "json", "messages": data["messages"]}, stream=True)
-        for chunk in response.iter_content(chunk_size=1024):
-            if chunk:
-                raw_data = chunk.decode('utf-8').replace("data: ", '')
-                for line in raw_data.strip().splitlines():
-                    if line and line != "[DONE]":
-                        try:
-                            full_response_article += json.loads(line)['data']
-                        except json.JSONDecodeError:
-                            print(f'Error : line')
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, headers=headers, json={"agentId": codegpt_agent_id, "stream": True, "format": "json", "messages": data["messages"]}) as response:
+                async for chunk in response.content.iter_chunked(1024):
+                    if chunk:
+                        raw_data = chunk.decode('utf-8').replace("data: ", '')
+                        for line in raw_data.strip().splitlines():
+                            if line and line != "[DONE]":
+                                try:
+                                    full_response_article += json.loads(line)['data']
+                                except json.JSONDecodeError:
+                                    print(f'Error : {line}')
     clean_article = full_response_article.replace("```json", "").replace("```", "")
 
     # JSON
@@ -192,3 +194,4 @@ if prompt := st.chat_input("Let's write an article"):
                 response = asyncio.run(run_function_agent(codegpt_agent_id, prompt))
                 message_placeholder.markdown(response)
                 st.session_state.messages.append({"role": "assistant", "content": response})
+
