@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 import aiohttp
 import requests
 
-load_dotenv()
+
 
 # CodeGPT Plus
 CODEGPT_API_KEY = os.getenv("CODEGPT_API_KEY")
