@@ -178,7 +178,6 @@ async def handle_chat_input(prompt):
                 st.session_state.messages.append({"role": "user", "content": prompt})
 
                 status.update(label="Regular Agent", state="running", expanded=True)
-                message_placeholder = st.empty()
                 url = f'https://plus.codegpt.co/api/v1/agent/{codegpt_agent_id}'
                 headers = {"Content-Type": "application/json; charset=utf-8", "Authorization": f"Bearer {api_key}"}
                 data = {"messages": st.session_state.messages}
@@ -196,7 +195,6 @@ async def handle_chat_input(prompt):
                                         json_object = json.loads(line)
                                         result = json_object['data']
                                         full_response += result
-                                        time.sleep(0.05)
                                         message_placeholder.markdown(full_response + "▌")
                                     except json.JSONDecodeError:
                                         print(f'Error : {line}')
@@ -212,3 +210,4 @@ if prompt := st.chat_input("Let's write an article"):
 
     # Run the asynchronous function
     asyncio.run(handle_chat_input(prompt))
+
