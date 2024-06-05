@@ -1,4 +1,4 @@
-streamlit==1.27.2
+streamlit
 python-dotenv
 asyncio
 judini
