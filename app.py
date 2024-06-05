@@ -1,9 +1,10 @@
 import streamlit as st
 import asyncio
+import aiohttp
 import time
-import requests
 import json
 import os
+import requests
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -37,7 +38,7 @@ publish_status = st.sidebar.selectbox(
 )
 
 # functions
-def run_function_agent(agent_id, prompt):
+async def run_function_agent(agent_id, prompt):
     url = f'https://plus.codegpt.co/api/v1/agent/{agent_id}'
     headers = {
         'Authorization': f'Bearer {api_key}',
@@ -51,30 +52,30 @@ def run_function_agent(agent_id, prompt):
             }
         ]
     }
-    response = requests.post(url, headers=headers, json=data, stream=True)
-    full_response = ''
-    for chunk in response.iter_content(chunk_size=1024):
-        if chunk:
-            raw_data = chunk.decode('utf-8').replace("data: ", '')
-            for line in raw_data.strip().splitlines():
-                if line and line != "[DONE]":
-                    try:
-                        full_response += json.loads(line)['data']
-                    except json.JSONDecodeError:
-                        print(f'Error : {line}')
-    return full_response
+
+    async with aiohttp.ClientSession() as session:
+        async with session.post(url, headers=headers, json=data) as response:
+            full_response = ''
+            async for chunk in response.content.iter_chunked(1024):
+                if chunk:
+                    raw_data = chunk.decode('utf-8').replace("data: ", '')
+                    for line in raw_data.strip().splitlines():
+                        if line and line != "[DONE]":
+                            try:
+                                full_response += json.loads(line)['data']
+                            except json.JSONDecodeError:
+                                print(f'Error : {line}')
+            return full_response
 
 # rest of your code
-
-
 def medium_publish():
     published = False
     article_url = ""
     title = ""
-    
+   
     data = {"messages": st.session_state.messages + [{"role": "user", "content": '''
-                                                        Write an article with the central topic of this conversation. Make sure it has a title, introduction, development and conclusion. Write everything in markdown. 
-                                                        
+                                                        Write an article with the central topic of this conversation. Make sure it has a title, introduction, development and conclusion. Write everything in markdown.
+                                                       
                                                         Provide the information in the following json format:
                                                         {
                                                             "title": "Example title",
@@ -97,7 +98,7 @@ def medium_publish():
                     except json.JSONDecodeError:
                         print(f'Error : line')
     clean_article = full_response_article.replace("```json", "").replace("```", "")
-    
+   
     # JSON
     json_article = json.loads(clean_article)
     # get "title"
@@ -106,8 +107,7 @@ def medium_publish():
     content = json_article['content']
     # get "content"
     tags = json_article['tags']
-
-    
+   
     # get medium userID
     url_me = 'https://api.medium.com/v1/me'
     headers = {
@@ -119,7 +119,7 @@ def medium_publish():
     medium_me_response = requests.get(url_me, headers=headers)
     medium_me_response_json = medium_me_response.json()
     medium_user_id = medium_me_response_json['data']['id']
-    
+   
     # create article
     url_post = "https://api.medium.com/v1/users/"+medium_user_id+"/posts"
     data = {
@@ -132,20 +132,19 @@ def medium_publish():
     }
     medium_response = requests.post(url_post, headers=headers, json=data)
     m_response = medium_response.json()
-
     if medium_response.status_code == 201:
         published = True
         article_url = m_response['data']['url']
         title = m_response['data']['title']
-    
+   
     return {
             "published": published,
             "article_url": article_url,
             "title": title
             }
-    
-    
-    
+   
+   
+   
 # Streamlit Chat
 # Initialize chat history
 if "messages" not in st.session_state:
@@ -156,21 +155,13 @@ for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# Accept user input
-if prompt := st.chat_input("Let's write an article"):
-
-    # Display user message in chat message container
-    with st.chat_message("user"):
-        st.markdown(prompt)
-
-    # Display assistant response in chat message container
+async def handle_chat_input(prompt):
     with st.chat_message("assistant"):
-
         with st.status("Wait a moment...", expanded=True) as status:
             full_response = ""
             message_placeholder = st.empty()
             is_function = False
-            response = asyncio.run(run_function_agent(CODEGPT_MEDIUM_AGENT_ID, prompt))
+            response = await run_function_agent(CODEGPT_MEDIUM_AGENT_ID, prompt)
             if(response != ""):
                 status.update(label="Medium Agent", state="running", expanded=True)
                 function_name = response["function"]["name"]
@@ -186,14 +177,13 @@ if prompt := st.chat_input("Let's write an article"):
             else:
                 # Add user message to chat history
                 st.session_state.messages.append({"role": "user", "content": prompt})
-                
+               
                 status.update(label="Regular Agent", state="running", expanded=True)
                 message_placeholder = st.empty()
                 url = 'https://plus.codegpt.co/api/v1/agent/'+codegpt_agent_id
                 headers = {"Content-Type": "application/json; charset=utf-8", "Authorization": "Bearer "+api_key}
                 # session messages
                 data = { "messages": st.session_state.messages }
-
                 response = requests.post(url, headers=headers, json=data, stream=True)
                 raw_data = ''
                 tokens = ''
@@ -206,7 +196,7 @@ if prompt := st.chat_input("Let's write an article"):
                                 line = line.strip()
                                 if line and line != "[DONE]":
                                     try:
-                                        json_object = json.loads(line) 
+                                        json_object = json.loads(line)
                                         result = json_object['data']
                                         full_response += result
                                         time.sleep(0.05)
@@ -216,7 +206,13 @@ if prompt := st.chat_input("Let's write an article"):
                                         print(f'Error : {line}')
                 message_placeholder.markdown(full_response)
             st.session_state.messages.append({"role": "assistant", "content": full_response})
-            
 
-            
-            
+# Accept user input
+if prompt := st.chat_input("Let's write an article"):
+    # Display user message in chat message container
+    with st.chat_message("user"):
+        st.markdown(prompt)
+
+    # Run the asynchronous function
+    asyncio.run(handle_chat_input(prompt)
+    
