@@ -16,7 +16,8 @@ CODEGPT_MEDIUM_AGENT_ID = os.getenv("CODEGPT_MEDIUM_AGENT_ID")
 MEDIUM_TOKEN = os.getenv("MEDIUM_TOKEN")
 
 # Initialize session state
-st.session_state.load_spinner = None
+if "load_spinner" not in st.session_state:
+    st.session_state.load_spinner = None
 
 # layout
 st.set_page_config(layout="centered")
@@ -63,6 +64,7 @@ async def run_function_agent(agent_id, prompt):
                                         full_response += result
                                 except json.JSONDecodeError:
                                     print(f'Error : {line}')
+    st.session_state.load_spinner = None
     return full_response
 
 async def medium_publish():
@@ -98,6 +100,7 @@ async def medium_publish():
                                     full_response_article += json.loads(line)['choices'][0]['delta'].get('content', '')
                                 except json.JSONDecodeError:
                                     print(f'Error : {line}')
+    st.session_state.load_spinner = None
     clean_article = full_response_article.replace("```json", "").replace("```", "")
 
     # JSON
