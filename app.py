@@ -67,7 +67,6 @@ async def run_function_agent(agent_id, prompt):
                                 print(f'Error : {line}')
             return full_response
 
-# rest of your code
 def medium_publish():
     published = False
     article_url = ""
@@ -214,5 +213,6 @@ if prompt := st.chat_input("Let's write an article"):
         st.markdown(prompt)
 
     # Run the asynchronous function
-    asyncio.run(handle_chat_input(prompt)
+    asyncio.run(handle_chat_input(prompt))
+
     
