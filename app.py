@@ -92,7 +92,7 @@ async def medium_publish():
         st.session_state.load_spinner = st.spinner(text="Processing...")
     with st.session_state.load_spinner:
         async with aiohttp.ClientSession() as session:
-            async with session.post(url, headers=headers, json={"agentId": codegpt_agent_id, "stream": True, "format": "json", "messages": data["messages"]}) as response:
+            async with session.post(url, headers=headers, json={"agentId": CODEGPT_MEDIUM_AGENT_ID, "stream": True, "format": "json", "messages": data["messages"]}) as response:
                 async for chunk in response.content.iter_chunked(1024):
                     if chunk:
                         raw_data = chunk.decode('utf-8').replace("data: ", '')
@@ -156,10 +156,6 @@ async def handle_prompt(prompt, agent_id):
     status = st.status("Wait a moment...", expanded=True)
     message_placeholder = st.empty()
 
-    # Create a new event loop for processing the agent's response
-    new_loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(new_loop)
-
     response = await run_function_agent(agent_id, prompt)
     message_placeholder.markdown(response)
     st.session_state.messages.append({"role": "assistant", "content": response})
@@ -190,23 +186,19 @@ def main():
         with st.chat_message("assistant"):
             is_function = False
 
-            # Run the asynchronous function using the new event loop
-            response = input_loop.run_until_complete(run_function_agent(CODEGPT_MEDIUM_AGENT_ID, prompt))
-
-            if isinstance(response, dict) and "function" in response:
-                function_name = response["function"]["name"]
-                if function_name == "medium_api_agent":
-                    article = input_loop.run_until_complete(medium_publish())
-                    if article["published"]:
-                        full_response = 'The article "' + article['title'] + '" was successfully published. URL: ' + article['article_url']
-                        st.markdown(full_response)
-                        st.session_state.messages.append({"role": "assistant", "content": full_response})
-                    else:
-                        st.write("Error")
-                        full_response = "Error"
+            # Check if the user wants to publish the article
+            if "publish article" in prompt.lower():
+                article = input_loop.run_until_complete(medium_publish())
+                if article["published"]:
+                    full_response = 'The article "' + article['title'] + '" was successfully published. URL: ' + article['article_url']
+                    st.markdown(full_response)
+                    st.session_state.messages.append({"role": "assistant", "content": full_response})
+                else:
+                    st.write("Error")
+                    full_response = "Error"
             else:
                 # Handle regular agent response
-                input_loop.run_until_complete(handle_prompt(prompt, CODEGPT_AGENT_ID))
+                input_loop.run_until_complete(handle_prompt(prompt, codegpt_agent_id))
 
 # Run the main function
 main()
