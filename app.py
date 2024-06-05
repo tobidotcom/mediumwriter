@@ -78,18 +78,21 @@ async def run_function_agent(agent_id, prompt):
     st.session_state.load_spinner = None
     return full_response
 
-async def medium_publish(article_content):
+async def medium_publish(article_content_str):
     published = False
     article_url = ""
     title = ""
 
     try:
-        # Parse the JSON response
+        # Parse the JSON string
+        article_content = json.loads(article_content_str)
+
+        # Access the JSON keys
         title = article_content['title']
         content = article_content['content']
         tags = article_content['tags']
-    except (KeyError, json.JSONDecodeError):
-        st.write("Error: Unable to parse the article content.")
+    except (KeyError, json.JSONDecodeError) as e:
+        st.write(f"Error: Unable to parse the article content. {e}")
         return {
             "published": published,
             "article_url": article_url,
