@@ -14,6 +14,9 @@ CODEGPT_AGENT_ID = os.getenv("CODEGPT_AGENT_ID")
 CODEGPT_MEDIUM_AGENT_ID = os.getenv("CODEGPT_MEDIUM_AGENT_ID")
 MEDIUM_TOKEN = os.getenv("MEDIUM_TOKEN")
 
+# Initialize session state
+st.session_state.load_spinner = None
+
 # layout
 st.set_page_config(layout="centered")
 st.title("Agent Writer for Medium 📝🤖")
@@ -42,7 +45,9 @@ async def run_function_agent(agent_id, prompt):
     headers = {"Content-Type": "application/json", "Authorization": "Bearer " + api_key}
     data = {"agentId": agent_id, "stream": True, "format": "json", "messages": [{"role": "user", "content": prompt}]}
     full_response = ""
-    async with st.session_state.load_spinner(text="Processing..."):
+    if st.session_state.load_spinner is None:
+        st.session_state.load_spinner = st.spinner(text="Processing...")
+    with st.session_state.load_spinner:
         async with requests.post(url, headers=headers, json=data, stream=True) as response:
             for chunk in response.iter_content(chunk_size=1024):
                 if chunk:
@@ -81,16 +86,19 @@ def medium_publish():
     headers = {"Content-Type": "application/json", "Authorization": "Bearer " + api_key}
     # session messages
     full_response_article = ''
-    response = requests.post(url, headers=headers, json={"agentId": codegpt_agent_id, "stream": True, "format": "json", "messages": data["messages"]}, stream=True)
-    for chunk in response.iter_content(chunk_size=1024):
-        if chunk:
-            raw_data = chunk.decode('utf-8').replace("data: ", '')
-            for line in raw_data.strip().splitlines():
-                if line and line != "[DONE]":
-                    try:
-                        full_response_article += json.loads(line)['data']
-                    except json.JSONDecodeError:
-                        print(f'Error : line')
+    if st.session_state.load_spinner is None:
+        st.session_state.load_spinner = st.spinner(text="Processing...")
+    with st.session_state.load_spinner:
+        response = requests.post(url, headers=headers, json={"agentId": codegpt_agent_id, "stream": True, "format": "json", "messages": data["messages"]}, stream=True)
+        for chunk in response.iter_content(chunk_size=1024):
+            if chunk:
+                raw_data = chunk.decode('utf-8').replace("data: ", '')
+                for line in raw_data.strip().splitlines():
+                    if line and line != "[DONE]":
+                        try:
+                            full_response_article += json.loads(line)['data']
+                        except json.JSONDecodeError:
+                            print(f'Error : line')
     clean_article = full_response_article.replace("```json", "").replace("```", "")
 
     # JSON
