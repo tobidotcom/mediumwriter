@@ -71,7 +71,7 @@ async def medium_publish():
     title = ""
 
     data = {"messages": st.session_state.messages + [{"role": "user", "content": '''
-                                                        Write an article with the central topic of this conversation. Make sure it has a title, introduction, development and conclusion. Write everything in markdown. 
+                                                        Write an article with the central topic of this conversation. Make sure it has a title, introduction, development and conclusion. Write everything in markdown.
 
                                                         Provide the information in the following json format:
                                                         {
@@ -170,7 +170,7 @@ if prompt := st.chat_input("Let's write an article"):
             # Use asyncio.run to run the asynchronous function
             response = asyncio.run(run_function_agent(CODEGPT_MEDIUM_AGENT_ID, prompt))
 
-            if response != "":
+            if isinstance(response, dict) and "function" in response:
                 status.update(label="Medium Agent", state="running", expanded=True)
                 function_name = response["function"]["name"]
                 if function_name == "medium_api_agent":
