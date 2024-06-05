@@ -62,6 +62,8 @@ async def run_function_agent(agent_id, prompt):
                                     if "choices" in json_object:
                                         result = json_object["choices"][0]["delta"].get("content", "")
                                         full_response += result
+                                        st.write(result, unsafe_allow_html=True)
+                                        await asyncio.sleep(0.01)  # Add a small delay for better UI experience
                                 except json.JSONDecodeError:
                                     print(f'Error : {line}')
     st.session_state.load_spinner = None
@@ -208,4 +210,5 @@ def main():
 
 # Run the main function
 main()
+
 
