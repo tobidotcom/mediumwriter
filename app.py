@@ -4,7 +4,7 @@ import time
 import requests
 import json
 import os
-from judini import Agent
+from judini.codegpt import Agent
 from dotenv import load_dotenv
 load_dotenv()
 
