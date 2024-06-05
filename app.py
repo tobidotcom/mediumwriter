@@ -69,57 +69,51 @@ async def run_function_agent(agent_id, prompt):
     st.session_state.load_spinner = None
     return full_response
 
-async def medium_publish():
+async def medium_publish(article_content):
     published = False
     article_url = ""
     title = ""
 
-    # Check if the user wants to publish the article
-    if any("publish article" in message["content"].lower() for message in st.session_state.messages):
-        # Initialize the CODEGPT_MEDIUM_AGENT
-        article_content = await run_function_agent(CODEGPT_MEDIUM_AGENT_ID, "Write an article with the central topic of this conversation. Make sure it has a title, introduction, development and conclusion. Provide the information in JSON format with keys 'title', 'content', and 'tags'.")
-
-        try:
-            # Parse the JSON response
-            json_article = json.loads(article_content)
-            title = json_article['title']
-            content = json_article['content']
-            tags = json_article['tags']
-        except json.JSONDecodeError:
-            st.write("Error: Unable to parse the article content.")
-            return {
-                "published": published,
-                "article_url": article_url,
-                "title": title
-            }
-
-        # Get the Medium user ID
-        url_me = 'https://api.medium.com/v1/me'
-        headers = {
-            "Authorization": "Bearer " + medium_token,
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-            "Accept-Charset": "utf-8"
+    try:
+        # Parse the JSON response
+        title = article_content['title']
+        content = article_content['content']
+        tags = article_content['tags']
+    except (KeyError, json.JSONDecodeError):
+        st.write("Error: Unable to parse the article content.")
+        return {
+            "published": published,
+            "article_url": article_url,
+            "title": title
         }
-        medium_me_response = await requests.get(url_me, headers=headers)
-        medium_me_response_json = medium_me_response.json()
-        medium_user_id = medium_me_response_json['data']['id']
 
-        # Create the article on Medium
-        url_post = "https://api.medium.com/v1/users/" + medium_user_id + "/posts"
-        data = {
-            "title": title,
-            "contentFormat": "markdown",
-            "content": content,
-            "publishStatus": publish_status,
-            "notifyFollowers": notify_followers,
-            "license": "all-rights-reserved"
-        }
-        medium_response = await requests.post(url_post, headers=headers, json=data)
+    # Get the Medium user ID
+    url_me = 'https://api.medium.com/v1/me'
+    headers = {
+        "Authorization": "Bearer " + medium_token,
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "Accept-Charset": "utf-8"
+    }
+    medium_me_response = await requests.get(url_me, headers=headers)
+    medium_me_response_json = medium_me_response.json()
+    medium_user_id = medium_me_response_json['data']['id']
 
-        if medium_response.status_code == 201:
-            published = True
-            article_url = medium_response.json()['data']['url']
+    # Create the article on Medium
+    url_post = "https://api.medium.com/v1/users/" + medium_user_id + "/posts"
+    data = {
+        "title": title,
+        "contentFormat": "markdown",
+        "content": content,
+        "publishStatus": publish_status,
+        "notifyFollowers": notify_followers,
+        "license": "all-rights-reserved"
+    }
+    medium_response = await requests.post(url_post, headers=headers, json=data)
+
+    if medium_response.status_code == 201:
+        published = True
+        article_url = medium_response.json()['data']['url']
 
     return {
         "published": published,
@@ -162,18 +156,22 @@ def main():
 
         # Display assistant response in chat message container
         with st.chat_message("assistant"):
-            # Check if the user wants to publish the article
-            if "publish article" in prompt.lower():
-                article = input_loop.run_until_complete(medium_publish())
-                if article["published"]:
-                    full_response = 'The article "' + article['title'] + '" was successfully published. URL: ' + article['article_url']
-                    st.markdown(full_response)
-                    st.session_state.messages.append({"role": "assistant", "content": full_response})
-                else:
-                    st.write("Error publishing the article.")
-            else:
-                # Handle regular agent response
-                input_loop.run_until_complete(handle_prompt(prompt, codegpt_agent_id))
+            input_loop.run_until_complete(handle_prompt(prompt, codegpt_agent_id))
+
+    # Generate Article Button
+    if st.button("Generate Article"):
+        article_content = input_loop.run_until_complete(run_function_agent(CODEGPT_MEDIUM_AGENT_ID, "Write an article with the central topic of this conversation. Make sure it has a title, introduction, development and conclusion. Provide the information in JSON format with keys 'title', 'content', and 'tags'."))
+        st.session_state.article = article_content
+
+    # Publish Button
+    if "article" in st.session_state and st.button("Publish"):
+        article = input_loop.run_until_complete(medium_publish(st.session_state.article))
+        if article["published"]:
+            full_response = 'The article "' + article['title'] + '" was successfully published. URL: ' + article['article_url']
+            st.markdown(full_response)
+            st.session_state.messages.append({"role": "assistant", "content": full_response})
+        else:
+            st.write("Error publishing the article.")
 
 # Run the main function
 main()
