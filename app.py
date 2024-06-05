@@ -51,10 +51,15 @@ publish_status = st.sidebar.selectbox(
 )
 
 # functions
-async def run_function_agent(agent_id, prompt):
+async def run_function_agent(agent_id, prompt, messages=None):
     url = 'https://api.codegpt.co/api/v1/chat/completions'
     headers = {"Content-Type": "application/json", "Authorization": "Bearer " + api_key}
-    data = {"agentId": agent_id, "stream": True, "format": "json", "messages": [{"role": "user", "content": prompt}]}
+    
+    if messages is None:
+        data = {"agentId": agent_id, "stream": True, "format": "json", "messages": [{"role": "user", "content": prompt}]}
+    else:
+        data = {"agentId": agent_id, "stream": True, "format": "json", "messages": messages + [{"role": "user", "content": prompt}]}
+
     full_response = ""
     if st.session_state.load_spinner is None:
         st.session_state.load_spinner = st.spinner(text="Processing...")
@@ -189,7 +194,7 @@ def main():
 
     # Generate Article Button
     if st.button("Generate Article"):
-        article_content = input_loop.run_until_complete(run_function_agent(CODEGPT_MEDIUM_AGENT_ID, "Write an article with the central topic of this conversation in JSON format with keys 'title', 'content', and 'tags'."))
+        article_content = input_loop.run_until_complete(run_function_agent(CODEGPT_MEDIUM_AGENT_ID, "Write an article with the central topic of this conversation in JSON format with keys 'title', 'content', and 'tags'.", st.session_state.messages))
         st.write(article_content)  # Print the article content for debugging
         st.session_state.article = article_content
 
