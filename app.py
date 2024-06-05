@@ -161,31 +161,29 @@ async def handle_chat_input(prompt):
             message_placeholder = st.empty()
             is_function = False
             response = await run_function_agent(CODEGPT_MEDIUM_AGENT_ID, prompt)
-            if(response != ""):
+            if response != "":
                 status.update(label="Medium Agent", state="running", expanded=True)
                 function_name = response["function"]["name"]
-                if(function_name == "medium_api_agent"):
+                if function_name == "medium_api_agent":
                     article = medium_publish()
-                    if(article["published"]):
-                        full_response='The article "'+article['title']+'" was successfully published. URL: '+article['article_url']
+                    if article["published"]:
+                        full_response = 'The article "' + article['title'] + '" was successfully published. URL: ' + article['article_url']
                         message_placeholder.markdown(full_response)
                         st.session_state.messages.append({"role": "assistant", "content": full_response})
                     else:
                         message_placeholder.write("Error")
-                        full_response="Error"
+                        full_response = "Error"
             else:
                 # Add user message to chat history
                 st.session_state.messages.append({"role": "user", "content": prompt})
-               
+
                 status.update(label="Regular Agent", state="running", expanded=True)
                 message_placeholder = st.empty()
-                url = 'https://plus.codegpt.co/api/v1/agent/'+codegpt_agent_id
-                headers = {"Content-Type": "application/json; charset=utf-8", "Authorization": "Bearer "+api_key}
-                # session messages
-                data = { "messages": st.session_state.messages }
+                url = f'https://plus.codegpt.co/api/v1/agent/{codegpt_agent_id}'
+                headers = {"Content-Type": "application/json; charset=utf-8", "Authorization": f"Bearer {api_key}"}
+                data = {"messages": st.session_state.messages}
                 response = requests.post(url, headers=headers, json=data, stream=True)
-                raw_data = ''
-                tokens = ''
+
                 for chunk in response.iter_content(chunk_size=1024):
                     if chunk:
                         raw_data = chunk.decode('utf-8').replace("data: ", '')
@@ -199,12 +197,12 @@ async def handle_chat_input(prompt):
                                         result = json_object['data']
                                         full_response += result
                                         time.sleep(0.05)
-                                        # Add a blinking cursor to simulate typing
                                         message_placeholder.markdown(full_response + "▌")
                                     except json.JSONDecodeError:
                                         print(f'Error : {line}')
+
                 message_placeholder.markdown(full_response)
-            st.session_state.messages.append({"role": "assistant", "content": full_response})
+                st.session_state.messages.append({"role": "assistant", "content": full_response})
 
 # Accept user input
 if prompt := st.chat_input("Let's write an article"):
@@ -214,5 +212,3 @@ if prompt := st.chat_input("Let's write an article"):
 
     # Run the asynchronous function
     asyncio.run(handle_chat_input(prompt))
-
-    
