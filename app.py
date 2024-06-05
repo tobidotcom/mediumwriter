@@ -45,29 +45,18 @@ publish_status = st.sidebar.selectbox(
 async def run_function_agent(agent_id, prompt):
     url = 'https://api.codegpt.co/api/v1/chat/completions'
     headers = {"Content-Type": "application/json", "Authorization": "Bearer " + api_key}
-    data = {"agentId": agent_id, "stream": True, "format": "json", "messages": [{"role": "user", "content": prompt}]}
-    full_response = ""
+    data = {"agentId": agent_id, "stream": False, "format": "json", "messages": [{"role": "user", "content": prompt}]}
     if st.session_state.load_spinner is None:
         st.session_state.load_spinner = st.spinner(text="Processing...")
     with st.session_state.load_spinner:
         async with aiohttp.ClientSession() as session:
             async with session.post(url, headers=headers, json=data) as response:
-                async for chunk in response.content.iter_chunked(1024):
-                    if chunk:
-                        raw_data = chunk.decode('utf-8').replace("data: ", '')
-                        for line in raw_data.strip().splitlines():
-                            if line and line != "[DONE]":
-                                try:
-                                    json_object = json.loads(line)
-                                    if "choices" in json_object:
-                                        result = json_object["choices"][0]["delta"].get("content", "")
-                                        full_response += result
-                                        st.write(result, unsafe_allow_html=True)
-                                        await asyncio.sleep(0.01)  # Add a small delay for better UI experience
-                                except json.JSONDecodeError:
-                                    print(f'Error : {line}')
-    st.session_state.load_spinner = None
-    return full_response
+                response_data = await response.json()
+                if response.status == 200:
+                    result = response_data["choices"][0]["message"]["content"]
+                    return result
+                else:
+                    st.write(f"Error: {response_data['error']}")
 
 async def medium_publish(article_content):
     published = False
