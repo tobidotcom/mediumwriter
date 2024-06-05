@@ -41,7 +41,6 @@ publish_status = st.sidebar.selectbox(
 )
 
 # functions
-@st.experimental_async
 async def run_function_agent(agent_id, prompt):
     url = 'https://api.codegpt.co/api/v1/chat/completions'
     headers = {"Content-Type": "application/json", "Authorization": "Bearer " + api_key}
@@ -66,7 +65,6 @@ async def run_function_agent(agent_id, prompt):
                                     print(f'Error : {line}')
     return full_response
 
-@st.experimental_async
 async def medium_publish():
     published = False
     article_url = ""
@@ -146,7 +144,7 @@ async def medium_publish():
         "title": title
     }
 
-async def main():
+def main():
     # Streamlit Chat
     # Initialize chat history
     if "messages" not in st.session_state:
@@ -170,14 +168,14 @@ async def main():
                 message_placeholder = st.empty()
                 is_function = False
 
-                # Use st.experimental_async to run the asynchronous function
-                response = await run_function_agent(CODEGPT_MEDIUM_AGENT_ID, prompt)
+                # Use asyncio.get_event_loop().run_until_complete() to run the asynchronous function
+                response = asyncio.get_event_loop().run_until_complete(run_function_agent(CODEGPT_MEDIUM_AGENT_ID, prompt))
 
                 if isinstance(response, dict) and "function" in response:
                     status.update(label="Medium Agent", state="running", expanded=True)
                     function_name = response["function"]["name"]
                     if function_name == "medium_api_agent":
-                        article = await medium_publish()
+                        article = asyncio.get_event_loop().run_until_complete(medium_publish())
                         if article["published"]:
                             full_response = 'The article "' + article['title'] + '" was successfully published. URL: ' + article['article_url']
                             message_placeholder.markdown(full_response)
@@ -191,9 +189,10 @@ async def main():
 
                     status.update(label="Regular Agent", state="running", expanded=True)
                     message_placeholder = st.empty()
-                    response = await run_function_agent(codegpt_agent_id, prompt)
+                    response = asyncio.get_event_loop().run_until_complete(run_function_agent(codegpt_agent_id, prompt))
                     message_placeholder.markdown(response)
                     st.session_state.messages.append({"role": "assistant", "content": response})
 
 # Run the main function
-asyncio.run(main())
+main()
+
