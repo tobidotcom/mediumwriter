@@ -19,6 +19,17 @@ MEDIUM_TOKEN = os.getenv("MEDIUM_TOKEN")
 if "load_spinner" not in st.session_state:
     st.session_state.load_spinner = None
 
+# Custom CSS for chat messages
+chat_message_css = """
+<style>
+.stChat .stMarkdown {
+    text-align: left;
+    max-width: 60%;
+    margin: 0 auto;
+}
+</style>
+"""
+
 # layout
 st.set_page_config(layout="centered")
 st.title("Agent Writer for Medium 📝🤖")
@@ -49,9 +60,7 @@ async def run_function_agent(agent_id, prompt):
     full_response = ""
     if st.session_state.load_spinner is None:
         st.session_state.load_spinner = st.spinner(text="Processing...")
-
-    try:
-        st.session_state.load_spinner.write("Processing...")
+    with st.session_state.load_spinner:
         async with aiohttp.ClientSession() as session:
             async with session.post(url, headers=headers, json=data) as response:
                 async for chunk in response.content.iter_chunked(1024):
@@ -64,13 +73,9 @@ async def run_function_agent(agent_id, prompt):
                                     if "choices" in json_object:
                                         result = json_object["choices"][0]["delta"].get("content", "")
                                         full_response += result
-                                        st.write(result, unsafe_allow_html=True)
-                                        await asyncio.sleep(0.01)  # Add a small delay for better UI experience
                                 except json.JSONDecodeError:
                                     print(f'Error : {line}')
-    finally:
-        st.session_state.load_spinner.empty()
-
+    st.session_state.load_spinner = None
     return full_response
 
 async def medium_publish(article_content):
@@ -150,16 +155,19 @@ def main():
     # Display chat messages from history on app rerun
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
+            st.markdown(chat_message_css, unsafe_allow_html=True)
             st.markdown(message["content"])
 
     # Accept user input
     if prompt := st.chat_input("Let's write an article"):
         # Display user message in chat message container
         with st.chat_message("user"):
+            st.markdown(chat_message_css, unsafe_allow_html=True)
             st.markdown(prompt)
 
         # Display assistant response in chat message container
         with st.chat_message("assistant"):
+            st.markdown(chat_message_css, unsafe_allow_html=True)
             input_loop.run_until_complete(handle_prompt(prompt, codegpt_agent_id))
 
     # Generate Article Button
@@ -179,3 +187,4 @@ def main():
 
 # Run the main function
 main()
+
