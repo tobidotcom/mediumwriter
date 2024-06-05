@@ -5,6 +5,7 @@ import json
 import os
 from dotenv import load_dotenv
 import aiohttp
+import requests
 
 load_dotenv()
 
@@ -68,7 +69,7 @@ async def run_function_agent(agent_id, prompt):
         json_response = full_response
     return json_response
 
-def medium_publish():
+async def medium_publish():
     published = False
     article_url = ""
     title = ""
@@ -120,7 +121,7 @@ def medium_publish():
         "Accept": "application/json",
         "Accept-Charset": "utf-8"
     }
-    medium_me_response = requests.get(url_me, headers=headers)
+    medium_me_response = await requests.get(url_me, headers=headers)
     medium_me_response_json = medium_me_response.json()
     medium_user_id = medium_me_response_json['data']['id']
 
@@ -134,7 +135,7 @@ def medium_publish():
         "notifyFollowers": notify_followers,
         "license": "all-rights-reserved"
     }
-    medium_response = requests.post(url_post, headers=headers, json=data)
+    medium_response = await requests.post(url_post, headers=headers, json=data)
     m_response = medium_response.json()
     if medium_response.status_code == 201:
         published = True
@@ -177,7 +178,7 @@ if prompt := st.chat_input("Let's write an article"):
                 status.update(label="Medium Agent", state="running", expanded=True)
                 function_name = response["function"]["name"]
                 if function_name == "medium_api_agent":
-                    article = medium_publish()
+                    article = asyncio.run(medium_publish())
                     if article["published"]:
                         full_response = 'The article "' + article['title'] + '" was successfully published. URL: ' + article['article_url']
                         message_placeholder.markdown(full_response)
@@ -194,4 +195,3 @@ if prompt := st.chat_input("Let's write an article"):
                 response = asyncio.run(run_function_agent(codegpt_agent_id, prompt))
                 message_placeholder.markdown(response)
                 st.session_state.messages.append({"role": "assistant", "content": response})
-
