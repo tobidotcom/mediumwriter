@@ -41,6 +41,7 @@ publish_status = st.sidebar.selectbox(
 )
 
 # functions
+@st.experimental_async
 async def run_function_agent(agent_id, prompt):
     url = 'https://api.codegpt.co/api/v1/chat/completions'
     headers = {"Content-Type": "application/json", "Authorization": "Bearer " + api_key}
@@ -65,6 +66,7 @@ async def run_function_agent(agent_id, prompt):
                                     print(f'Error : {line}')
     return full_response
 
+@st.experimental_async
 async def medium_publish():
     published = False
     article_url = ""
@@ -144,50 +146,54 @@ async def medium_publish():
         "title": title
     }
 
-# Streamlit Chat
-# Initialize chat history
-if "messages" not in st.session_state:
-    st.session_state.messages = []
+async def main():
+    # Streamlit Chat
+    # Initialize chat history
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
 
-# Display chat messages from history on app rerun
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+    # Display chat messages from history on app rerun
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
 
-# Accept user input
-if prompt := st.chat_input("Let's write an article"):
-    # Display user message in chat message container
-    with st.chat_message("user"):
-        st.markdown(prompt)
+    # Accept user input
+    if prompt := st.chat_input("Let's write an article"):
+        # Display user message in chat message container
+        with st.chat_message("user"):
+            st.markdown(prompt)
 
-    # Display assistant response in chat message container
-    with st.chat_message("assistant"):
-        with st.status("Wait a moment...", expanded=True) as status:
-            full_response = ""
-            message_placeholder = st.empty()
-            is_function = False
-
-            # Use st.experimental_run to run the asynchronous function
-            response = st.experimental_run(run_function_agent, CODEGPT_MEDIUM_AGENT_ID, prompt)
-
-            if isinstance(response, dict) and "function" in response:
-                status.update(label="Medium Agent", state="running", expanded=True)
-                function_name = response["function"]["name"]
-                if function_name == "medium_api_agent":
-                    article = st.experimental_run(medium_publish)
-                    if article["published"]:
-                        full_response = 'The article "' + article['title'] + '" was successfully published. URL: ' + article['article_url']
-                        message_placeholder.markdown(full_response)
-                        st.session_state.messages.append({"role": "assistant", "content": full_response})
-                    else:
-                        message_placeholder.write("Error")
-                        full_response = "Error"
-            else:
-                # Add user message to chat history
-                st.session_state.messages.append({"role": "user", "content": prompt})
-
-                status.update(label="Regular Agent", state="running", expanded=True)
+        # Display assistant response in chat message container
+        with st.chat_message("assistant"):
+            with st.status("Wait a moment...", expanded=True) as status:
+                full_response = ""
                 message_placeholder = st.empty()
-                response = st.experimental_run(run_function_agent, codegpt_agent_id, prompt)
-                message_placeholder.markdown(response)
-                st.session_state.messages.append({"role": "assistant", "content": response})
+                is_function = False
+
+                # Use st.experimental_async to run the asynchronous function
+                response = await run_function_agent(CODEGPT_MEDIUM_AGENT_ID, prompt)
+
+                if isinstance(response, dict) and "function" in response:
+                    status.update(label="Medium Agent", state="running", expanded=True)
+                    function_name = response["function"]["name"]
+                    if function_name == "medium_api_agent":
+                        article = await medium_publish()
+                        if article["published"]:
+                            full_response = 'The article "' + article['title'] + '" was successfully published. URL: ' + article['article_url']
+                            message_placeholder.markdown(full_response)
+                            st.session_state.messages.append({"role": "assistant", "content": full_response})
+                        else:
+                            message_placeholder.write("Error")
+                            full_response = "Error"
+                else:
+                    # Add user message to chat history
+                    st.session_state.messages.append({"role": "user", "content": prompt})
+
+                    status.update(label="Regular Agent", state="running", expanded=True)
+                    message_placeholder = st.empty()
+                    response = await run_function_agent(codegpt_agent_id, prompt)
+                    message_placeholder.markdown(response)
+                    st.session_state.messages.append({"role": "assistant", "content": response})
+
+# Run the main function
+asyncio.run(main())
