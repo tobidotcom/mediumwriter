@@ -75,6 +75,8 @@ async def run_function_agent(agent_id, prompt):
                                         full_response += result
                                 except json.JSONDecodeError:
                                     print(f'Error : {line}')
+    # Remove any additional text or characters from the response
+    full_response = full_response.strip()
     st.session_state.load_spinner = None
     return full_response
 
@@ -91,12 +93,9 @@ async def medium_publish(article_content_str):
             "title": title
         }
 
-    st.write(f"Received article content: {article_content_str}")  # Debug statement
-
     try:
         # Parse the JSON string
         article_content = json.loads(article_content_str)
-        st.write(f"Parsed JSON: {article_content}")  # Debug statement
 
         # Access the JSON keys
         title = article_content['title']
@@ -186,7 +185,7 @@ def main():
 
     # Generate Article Button
     if st.button("Generate Article"):
-        article_content = input_loop.run_until_complete(run_function_agent(CODEGPT_MEDIUM_AGENT_ID, "Write an article with the central topic of this conversation. Make sure it has a title, introduction, development and conclusion. Provide the information in JSON format with keys 'title', 'content', and 'tags'."))
+        article_content = input_loop.run_until_complete(run_function_agent(CODEGPT_MEDIUM_AGENT_ID, "Write an article with the central topic of this conversation in JSON format with keys 'title', 'content', and 'tags'."))
         st.session_state.article = article_content
 
     # Publish Button
@@ -201,4 +200,3 @@ def main():
 
 # Run the main function
 main()
-
