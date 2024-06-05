@@ -58,16 +58,12 @@ async def run_function_agent(agent_id, prompt):
                             if line and line != "[DONE]":
                                 try:
                                     json_object = json.loads(line)
-                                    result = json_object['data']
-                                    full_response += result
+                                    if "choices" in json_object:
+                                        result = json_object["choices"][0]["delta"].get("content", "")
+                                        full_response += result
                                 except json.JSONDecodeError:
                                     print(f'Error : {line}')
-    try:
-        json_response = json.loads(full_response)
-        return json_response
-    except json.JSONDecodeError:
-        json_response = full_response
-    return json_response
+    return full_response
 
 async def medium_publish():
     published = False
@@ -99,7 +95,7 @@ async def medium_publish():
                         for line in raw_data.strip().splitlines():
                             if line and line != "[DONE]":
                                 try:
-                                    full_response_article += json.loads(line)['data']
+                                    full_response_article += json.loads(line)['choices'][0]['delta'].get('content', '')
                                 except json.JSONDecodeError:
                                     print(f'Error : {line}')
     clean_article = full_response_article.replace("```json", "").replace("```", "")
