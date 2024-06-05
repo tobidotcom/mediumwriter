@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 import aiohttp
 import requests
 
-
+load_dotenv()
 
 # CodeGPT Plus
 CODEGPT_API_KEY = os.getenv("CODEGPT_API_KEY")
@@ -63,6 +63,7 @@ async def run_function_agent(agent_id, prompt):
                                         result = json_object["choices"][0]["delta"].get("content", "")
                                         full_response += result
                                         st.write(result, unsafe_allow_html=True)
+                                        await asyncio.sleep(0.01)  # Add a small delay for better UI experience
                                 except json.JSONDecodeError:
                                     print(f'Error : {line}')
     st.session_state.load_spinner = None
@@ -73,74 +74,52 @@ async def medium_publish():
     article_url = ""
     title = ""
 
-    data = {"messages": st.session_state.messages + [{"role": "user", "content": '''
-                                                        Write an article with the central topic of this conversation. Make sure it has a title, introduction, development and conclusion. Write everything in markdown.
+    # Check if the user wants to publish the article
+    if any("publish article" in message["content"].lower() for message in st.session_state.messages):
+        # Initialize the CODEGPT_MEDIUM_AGENT
+        article_content = await run_function_agent(CODEGPT_MEDIUM_AGENT_ID, "Write an article with the central topic of this conversation. Make sure it has a title, introduction, development and conclusion. Provide the information in JSON format with keys 'title', 'content', and 'tags'.")
 
-                                                        Provide the information in the following json format:
-                                                        {
-                                                            "title": "Example title",
-                                                            "content": "Example Content",
-                                                            "tags":["example1", "example2", "example3"]
-                                                        }
-                                                        '''}]}
-    url = 'https://api.codegpt.co/api/v1/chat/completions'
-    headers = {"Content-Type": "application/json", "Authorization": "Bearer " + api_key}
-    # session messages
-    full_response_article = ''
-    if st.session_state.load_spinner is None:
-        st.session_state.load_spinner = st.spinner(text="Processing...")
-    with st.session_state.load_spinner:
-        async with aiohttp.ClientSession() as session:
-            async with session.post(url, headers=headers, json={"agentId": CODEGPT_MEDIUM_AGENT_ID, "stream": True, "format": "json", "messages": data["messages"]}) as response:
-                async for chunk in response.content.iter_chunked(1024):
-                    if chunk:
-                        raw_data = chunk.decode('utf-8').replace("data: ", '')
-                        for line in raw_data.strip().splitlines():
-                            if line and line != "[DONE]":
-                                try:
-                                    full_response_article += json.loads(line)['choices'][0]['delta'].get('content', '')
-                                except json.JSONDecodeError:
-                                    print(f'Error : {line}')
-    st.session_state.load_spinner = None
-    clean_article = full_response_article.replace("```json", "").replace("```", "")
+        try:
+            # Parse the JSON response
+            json_article = json.loads(article_content)
+            title = json_article['title']
+            content = json_article['content']
+            tags = json_article['tags']
+        except json.JSONDecodeError:
+            st.write("Error: Unable to parse the article content.")
+            return {
+                "published": published,
+                "article_url": article_url,
+                "title": title
+            }
 
-    # JSON
-    json_article = json.loads(clean_article)
-    # get "title"
-    title = json_article['title']
-    # get "content"
-    content = json_article['content']
-    # get "content"
-    tags = json_article['tags']
+        # Get the Medium user ID
+        url_me = 'https://api.medium.com/v1/me'
+        headers = {
+            "Authorization": "Bearer " + medium_token,
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "Accept-Charset": "utf-8"
+        }
+        medium_me_response = await requests.get(url_me, headers=headers)
+        medium_me_response_json = medium_me_response.json()
+        medium_user_id = medium_me_response_json['data']['id']
 
-    # get medium userID
-    url_me = 'https://api.medium.com/v1/me'
-    headers = {
-        "Authorization": "Bearer " + medium_token,
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-        "Accept-Charset": "utf-8"
-    }
-    medium_me_response = await requests.get(url_me, headers=headers)
-    medium_me_response_json = medium_me_response.json()
-    medium_user_id = medium_me_response_json['data']['id']
+        # Create the article on Medium
+        url_post = "https://api.medium.com/v1/users/" + medium_user_id + "/posts"
+        data = {
+            "title": title,
+            "contentFormat": "markdown",
+            "content": content,
+            "publishStatus": publish_status,
+            "notifyFollowers": notify_followers,
+            "license": "all-rights-reserved"
+        }
+        medium_response = await requests.post(url_post, headers=headers, json=data)
 
-    # create article
-    url_post = "https://api.medium.com/v1/users/" + medium_user_id + "/posts"
-    data = {
-        "title": title,
-        "contentFormat": "markdown",
-        "content": content,
-        "publishStatus": publish_status,
-        "notifyFollowers": notify_followers,
-        "license": "all-rights-reserved"
-    }
-    medium_response = await requests.post(url_post, headers=headers, json=data)
-    m_response = medium_response.json()
-    if medium_response.status_code == 201:
-        published = True
-        article_url = m_response['data']['url']
-        title = m_response['data']['title']
+        if medium_response.status_code == 201:
+            published = True
+            article_url = medium_response.json()['data']['url']
 
     return {
         "published": published,
@@ -183,8 +162,6 @@ def main():
 
         # Display assistant response in chat message container
         with st.chat_message("assistant"):
-            is_function = False
-
             # Check if the user wants to publish the article
             if "publish article" in prompt.lower():
                 article = input_loop.run_until_complete(medium_publish())
@@ -193,8 +170,7 @@ def main():
                     st.markdown(full_response)
                     st.session_state.messages.append({"role": "assistant", "content": full_response})
                 else:
-                    st.write("Error")
-                    full_response = "Error"
+                    st.write("Error publishing the article.")
             else:
                 # Handle regular agent response
                 input_loop.run_until_complete(handle_prompt(prompt, codegpt_agent_id))
