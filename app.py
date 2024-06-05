@@ -83,9 +83,20 @@ async def medium_publish(article_content_str):
     article_url = ""
     title = ""
 
+    if not article_content_str:
+        st.write("Error: Article content is empty.")
+        return {
+            "published": published,
+            "article_url": article_url,
+            "title": title
+        }
+
+    st.write(f"Received article content: {article_content_str}")  # Debug statement
+
     try:
         # Parse the JSON string
         article_content = json.loads(article_content_str)
+        st.write(f"Parsed JSON: {article_content}")  # Debug statement
 
         # Access the JSON keys
         title = article_content['title']
