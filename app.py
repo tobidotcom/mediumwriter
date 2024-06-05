@@ -7,8 +7,6 @@ from dotenv import load_dotenv
 import aiohttp
 import requests
 
-load_dotenv()
-
 # CodeGPT Plus
 CODEGPT_API_KEY = os.getenv("CODEGPT_API_KEY")
 CODEGPT_AGENT_ID = os.getenv("CODEGPT_AGENT_ID")
@@ -94,6 +92,9 @@ async def medium_publish(article_content_str):
         }
 
     try:
+        # Print the article content string for debugging
+        print(f"Article Content String: {article_content_str}")
+
         # Parse the JSON string
         article_content = json.loads(article_content_str)
 
@@ -136,6 +137,9 @@ async def medium_publish(article_content_str):
     if medium_response.status_code == 201:
         published = True
         article_url = medium_response.json()['data']['url']
+    else:
+        st.write(f"Error publishing the article. Status Code: {medium_response.status_code}")
+        st.write(f"Response Text: {medium_response.text}")
 
     return {
         "published": published,
@@ -186,6 +190,7 @@ def main():
     # Generate Article Button
     if st.button("Generate Article"):
         article_content = input_loop.run_until_complete(run_function_agent(CODEGPT_MEDIUM_AGENT_ID, "Write an article with the central topic of this conversation in JSON format with keys 'title', 'content', and 'tags'."))
+        st.write(article_content)  # Print the article content for debugging
         st.session_state.article = article_content
 
     # Publish Button
