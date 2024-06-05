@@ -167,14 +167,14 @@ if prompt := st.chat_input("Let's write an article"):
             message_placeholder = st.empty()
             is_function = False
 
-            # Use asyncio.run to run the asynchronous function
-            response = asyncio.run(run_function_agent(CODEGPT_MEDIUM_AGENT_ID, prompt))
+            # Use st.experimental_run to run the asynchronous function
+            response = st.experimental_run(run_function_agent, CODEGPT_MEDIUM_AGENT_ID, prompt)
 
             if isinstance(response, dict) and "function" in response:
                 status.update(label="Medium Agent", state="running", expanded=True)
                 function_name = response["function"]["name"]
                 if function_name == "medium_api_agent":
-                    article = asyncio.run(medium_publish())
+                    article = st.experimental_run(medium_publish)
                     if article["published"]:
                         full_response = 'The article "' + article['title'] + '" was successfully published. URL: ' + article['article_url']
                         message_placeholder.markdown(full_response)
@@ -188,6 +188,6 @@ if prompt := st.chat_input("Let's write an article"):
 
                 status.update(label="Regular Agent", state="running", expanded=True)
                 message_placeholder = st.empty()
-                response = asyncio.run(run_function_agent(codegpt_agent_id, prompt))
+                response = st.experimental_run(run_function_agent, codegpt_agent_id, prompt)
                 message_placeholder.markdown(response)
                 st.session_state.messages.append({"role": "assistant", "content": response})
