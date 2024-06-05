@@ -4,8 +4,8 @@ import time
 import requests
 import json
 import os
-from judini.codegpt import Agent
 from dotenv import load_dotenv
+
 load_dotenv()
 
 # CodeGPT Plus
@@ -37,17 +37,35 @@ publish_status = st.sidebar.selectbox(
 )
 
 # functions
-async def run_function_agent(agent_id, prompt):
-    agent_instance = Agent(api_key=api_key,agent_id=agent_id)
-    full_response = ""
-    async for response in agent_instance.chat_completion(prompt, stream=False):
-        full_response += response
-    try:
-        json_response = json.loads(full_response)
-        return json_response
-    except json.JSONDecodeError:
-        json_response = full_response
-    return json_response
+def run_function_agent(agent_id, prompt):
+    url = f'https://plus.codegpt.co/api/v1/agent/{agent_id}'
+    headers = {
+        'Authorization': f'Bearer {api_key}',
+        'Content-Type': 'application/json; charset=utf-8'
+    }
+    data = {
+        'messages': [
+            {
+                'role': 'user',
+                'content': prompt
+            }
+        ]
+    }
+    response = requests.post(url, headers=headers, json=data, stream=True)
+    full_response = ''
+    for chunk in response.iter_content(chunk_size=1024):
+        if chunk:
+            raw_data = chunk.decode('utf-8').replace("data: ", '')
+            for line in raw_data.strip().splitlines():
+                if line and line != "[DONE]":
+                    try:
+                        full_response += json.loads(line)['data']
+                    except json.JSONDecodeError:
+                        print(f'Error : {line}')
+    return full_response
+
+# rest of your code
+
 
 def medium_publish():
     published = False
@@ -200,4 +218,5 @@ if prompt := st.chat_input("Let's write an article"):
             st.session_state.messages.append({"role": "assistant", "content": full_response})
             
 
+            
             
