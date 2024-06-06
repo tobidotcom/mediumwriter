@@ -50,20 +50,6 @@ publish_status = st.sidebar.selectbox(
     ('public', 'draft', 'unlisted')
 )
 
-# Load the JSON data
-json_string = """
-{ "title": "Local SEO Guide for Your Honey Business: Boosting Visibility and Sales", "content": "# Local SEO Guide for Your Honey Business: Boosting Visibility and Sales\n\n## Introduction\n\nIn today's digital age, having a strong online presence is essential for any business, including those selling honey. Local SEO (Search Engine Optimization) can help your honey business appear in local search results, attract more customers, and ultimately increase sales. This guide will walk you through the steps to optimize your honey business for local SEO.\n\n## Understanding Local SEO\n\nLocal SEO is the practice of optimizing your online presence to attract more business from relevant local searches. These searches take place on Google and other search engines. For a honey business, this means appearing in search results when potential customers in your area search for honey or related products.\n\n## Keyword Research\n\n### Primary Keywords\n\nIdentify high-volume, relevant primary keywords that potential customers might use. Examples include:\n\n- Honey near me\n- Local honey\n- Buy honey online\n\n### Long-Tail Keywords\n\nLong-tail keywords are more specific and less competitive. Examples include:\n\n- Organic honey in [Your City]\n- Raw honey suppliers in [Your City]\n- Best local honey for sale\n\n### LSI Keywords\n\nLatent Semantic Indexing (LSI) keywords add context and depth to your content. Examples include:\n\n- Beekeeping\n- Natural sweeteners\n- Honey benefits\n\n## Optimizing Your Website\n\n### On-Page SEO\n\n- **Title Tags and Meta Descriptions**: Include primary keywords in your title tags and meta descriptions.\n- **Header Tags**: Use header tags (H1, H2, H3) to structure your content and include keywords.\n- **Content**: Write informative and engaging content that naturally incorporates your keywords.\n- **Images**: Optimize images with descriptive file names and alt text.\n\n### Mobile Optimization\n\nEnsure your website is mobile-friendly, as many local searches are conducted on mobile devices.\n\n## Google My Business\n\n### Setting Up Your Profile\n\n- **Claim Your Business**: If you haven't already, claim your Google My Business (GMB) listing.\n- **Complete Your Profile**: Fill out all the information, including business name, address, phone number, website, and hours of operation.\n- **Add Photos**: Upload high-quality photos of your products, store, and team.\n\n### Managing Reviews\n\n- **Encourage Reviews**: Ask satisfied customers to leave positive reviews on your GMB listing.\n- **Respond to Reviews**: Engage with customers by responding to their reviews, both positive and negative.\n\n## Local Citations and Backlinks\n\n### Local Citations\n\nEnsure your business information is consistent across all online directories, such as Yelp, Yellow Pages, and local business directories.\n\n### Backlinks\n\nAcquire backlinks from reputable local websites, such as local news sites, blogs, and business associations.\n\n## Social Media and Content Marketing\n\n### Social Media\n\n- **Engage with Your Audience**: Use social media platforms to interact with your customers and share updates about your honey business.\n- **Local Hashtags**: Use local hashtags to increase your visibility in local searches.\n\n### Content Marketing\n\n- **Blog Posts**: Write blog posts about topics related to honey, such as recipes, health benefits, and beekeeping tips.\n- **Local Events**: Promote local events you participate in or sponsor.\n\n## Conclusion\n\nBy following this local SEO guide, your honey business can improve its online visibility, attract more local customers, and increase sales. Remember to continuously monitor your SEO efforts and make adjustments as needed to stay ahead of the competition.\n\n## Call to Action\n\nIf you found this guide helpful, please share it with other local businesses. Feel free to leave a comment below with your thoughts or any additional tips you might have for optimizing local SEO.\n", "tags": ["Local SEO", "Honey Business", "SEO Guide", "Digital Marketing", "Small Business"] }
-"""
-
-data = json.loads(json_string)
-
-# Display the JSON data
-st.header(data['title'])
-st.markdown(data['content'])
-
-tags = ', '.join(data['tags'])
-st.write(f"Tags: {tags}")
-
 # functions
 async def run_function_agent(agent_id, prompt, messages=None):
     url = 'https://api.codegpt.co/api/v1/chat/completions'
@@ -221,4 +207,5 @@ def main():
 
 # Run the main function
 main()
+
 
