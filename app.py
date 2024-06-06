@@ -193,11 +193,9 @@ def main():
             input_loop.run_until_complete(handle_prompt(prompt, codegpt_agent_id))
 
     # Generate Article Button
-    if st.button("Generate Article"):
-        article_content = input_loop.run_until_complete(run_function_agent(CODEGPT_MEDIUM_AGENT_ID, article_content = input_loop.run_until_complete(run_function_agent(CODEGPT_MEDIUM_AGENT_ID, "Write a single JSON object with the following keys: 'title', 'content', and 'tags'. The 'content' should be in Markdown format and divided into sections with appropriate headings. The topic of the article should be based on our previous conversation.", st.session_state.messages))
+  if st.button("Generate Article"):
+    article_content = input_loop.run_until_complete(run_function_agent(CODEGPT_MEDIUM_AGENT_ID, "Write a single JSON object with the following keys: 'title', 'content', and 'tags'. The 'content' should be in Markdown format and divided into sections with appropriate headings. The topic of the article should be based on our previous conversation.", st.session_state.messages))
 
-        st.write(article_content)  # Print the article content for debugging
-        st.session_state.article = article_content
 
     # Publish Button
     if "article" in st.session_state and st.button("Publish"):
