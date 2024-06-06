@@ -96,13 +96,11 @@ async def medium_publish(article_content_str):
             "title": title
         }
 
+    print(f"Received article_content_str: {article_content_str}")
+
     try:
-        # Print the article content string for debugging
-        print(f"Article Content String: {article_content_str}")
-
-        # Parse the JSON string
         article_content = json.loads(article_content_str)
-
+        print(f"Parsed article_content: {article_content}")
         # Access the JSON keys
         title = article_content['title']
         content = article_content['content']
@@ -209,3 +207,4 @@ def main():
 
 # Run the main function
 main()
+
